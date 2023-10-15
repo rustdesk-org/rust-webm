@@ -85,7 +85,7 @@ pub mod mux {
     }
 
     #[derive(Eq, PartialEq, Clone, Copy)]
-    pub struct VideoTrack(ffi::mux::SegmentMutPtr, ffi::mux::VideoTrackMutPtr);
+    pub struct VideoTrack(ffi::mux::SegmentMutPtr, ffi::mux::VideoTrackMutPtr, u64);
     #[derive(Eq, PartialEq, Clone, Copy)]
     pub struct AudioTrack(ffi::mux::SegmentMutPtr, ffi::mux::AudioTrackMutPtr);
 
@@ -144,6 +144,10 @@ pub mod mux {
                 ) != 0
             }
         }
+
+        pub fn track_number(&self) -> u64 {
+            self.2
+        }
     }
     impl Track for VideoTrack {
         fn is_video(&self) -> bool {
@@ -191,12 +195,14 @@ pub mod mux {
     pub enum VideoCodecId {
         VP8,
         VP9,
+        AV1,
     }
     impl VideoCodecId {
         fn get_id(&self) -> u32 {
             match self {
                 VideoCodecId::VP8 => ffi::mux::VP8_CODEC_ID,
                 VideoCodecId::VP9 => ffi::mux::VP9_CODEC_ID,
+                VideoCodecId::AV1 => ffi::mux::AV1_CODEC_ID,
             }
         }
     }
@@ -237,6 +243,7 @@ pub mod mux {
             id: Option<i32>,
             codec: VideoCodecId,
         ) -> VideoTrack {
+            let mut id_out: u64 = 0;
             let vt = unsafe {
                 ffi::mux::segment_add_video_track(
                     self.ffi,
@@ -244,9 +251,21 @@ pub mod mux {
                     height as i32,
                     id.unwrap_or(0),
                     codec.get_id(),
+                    (&mut id_out) as *const u64,
                 )
             };
-            VideoTrack(self.ffi, vt)
+            VideoTrack(self.ffi, vt, id_out)
+        }
+
+        pub fn set_codec_private(&mut self, track_number: u64, data: &[u8]) -> bool {
+            unsafe {
+                ffi::mux::segment_set_codec_private(
+                    self.ffi,
+                    track_number,
+                    data.as_ptr(),
+                    data.len() as _,
+                )
+            }
         }
         pub fn add_audio_track(
             &mut self,
