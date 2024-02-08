@@ -17,9 +17,7 @@ edition = "2021"
 [dependencies]
 webm-sys = { version = "1.0.4", path = "src/sys" }
 
-[lib]
-name = "webm"
-path = "src/lib/lib.rs"
+
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
